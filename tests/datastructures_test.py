@@ -37,6 +37,13 @@ class DataStructuresTestCase(unittest.TestCase):
         self.context.__delattr__(self.testItem)
         self.assertRaises(AttributeError, self.context.__getattr__, self.testItem)
 
+    def test_function_copy(self):
+        self.context[0] = "test1"
+        self.context[1] = "test2"
+
+        newContext = self.context.copy()
+        self.assertEquals(self.context, newContext)
+
     def tearDown(self):
         pass
 
