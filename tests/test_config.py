@@ -179,5 +179,19 @@ class TestConfigLoad(unittest.TestCase):
                               map(lambda k: (k, getattr(obj, k)), expected_keys))
 
 
+class TestConfigFromModule(unittest.TestCase):
+    NON_EXIST = 'non.existing.module'
+
+    def test_not_exists(self):
+        c = config.Config()
+
+        self.assertRaises(ImportError, lambda: c.from_module(self.NON_EXIST))
+
+
+class TestConfigFromFile(unittest.TestCase):
+    FILE_NO_PY = 'test_file.me'
+    FILE_PY = 'test_file.py'
+
+
 if __name__ == '__main__':
     unittest.main()
