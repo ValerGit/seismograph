@@ -7,6 +7,7 @@ from mock import patch
 
 from seismograph import config
 from seismograph.exceptions import ConfigError
+from seismograph.utils import pyv
 from lib.factories import config_factory
 
 
@@ -184,7 +185,7 @@ class TestConfigLoad(unittest.TestCase):
 
 class TestConfigFromModule(unittest.TestCase):
     NON_EXIST = 'non.existing.module'
-    TEST_LIB = 'lib.test_config_fixture'
+    TEST_LIB = 'tests.lib.test_config_fixture'
 
     def test_not_exists(self):
         c = config.Config()
@@ -204,33 +205,44 @@ class TestConfigFromFile(unittest.TestCase):
     FILE_NO_PY = 'test_file.me'
     FILE_PY = 'test_file.py'
 
+    FILE_PY_EXISTS = 'tests/lib/test_config_fixture.py'
+    TEST_LIB = 'tests.lib.test_config_fixture'
+
     @patch('os.path.isfile')
-    def test_not_exist_no_py(self, mock_isfile):
+    def test_not_exists_no_py(self, mock_isfile):
         c = config.Config()
         mock_isfile.return_value = False
         self.assertRaisesRegexp(ConfigError, '^config file does not exist at path',
                                 lambda: c.from_py_file(self.FILE_NO_PY))
 
     @patch('os.path.isfile')
-    def test_not_exist_py(self, mock_isfile):
+    def test_not_exists_py(self, mock_isfile):
         c = config.Config()
         mock_isfile.return_value = False
         self.assertRaisesRegexp(ConfigError, '^config file does not exist at path',
                                 lambda: c.from_py_file(self.FILE_PY))
 
     @patch('os.path.isfile')
-    def test_exist_no_py(self, mock_isfile):
+    def test_exists_no_py(self, mock_isfile):
         c = config.Config()
         mock_isfile.return_value = True
         self.assertRaisesRegexp(ConfigError, '^config file is not python file$',
                                 lambda: c.from_py_file(self.FILE_NO_PY))
 
     @patch('os.path.isfile')
-    def test_exist_py(self, mock_isfile):
+    def test_exists_py_fail(self, mock_isfile):
         c = config.Config()
         mock_isfile.return_value = True
         self.assertRaisesRegexp(IOError, 'Unable to load file',
                                 lambda: c.from_py_file(self.FILE_PY))
+
+    def test_exists_py(self):
+        real_conf = import_module(self.TEST_LIB)
+        real_conf_keys = filter(lambda k: not k.startswith('_'), dir(real_conf))
+
+        c = config.Config()
+        c.from_py_file(self.FILE_PY_EXISTS)
+        self.assertItemsEqual(dict(c).keys(), real_conf_keys)
 
 
 if __name__ == '__main__':
