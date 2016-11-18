@@ -4,6 +4,7 @@ import unittest
 from mock import patch
 
 from seismograph import config
+from seismograph.exceptions import ConfigError
 from lib.factories import config_factory
 
 
@@ -187,19 +188,47 @@ class TestConfigFromModule(unittest.TestCase):
 
         self.assertRaises(ImportError, lambda: c.from_module(self.NON_EXIST))
 
-    @patch('importlib.import_module')
-    def test_exists(self, mock_import):
-        mock_import.return_value = {}
-
-        c = config.Config()
-        c.from_module(self.NON_EXIST)
-
-        mock_import.assert_called_with({})
+        # @patch('importlib.import_module')
+        # def test_exists(self, mock_import):
+        #     mock_import.return_value = {}
+        #
+        #     c = config.Config()
+        #     c.from_module(self.NON_EXIST)
+        #
+        #     mock_import.assert_called_with({})
 
 
 class TestConfigFromFile(unittest.TestCase):
     FILE_NO_PY = 'test_file.me'
     FILE_PY = 'test_file.py'
+
+    @patch('os.path.isfile')
+    def test_not_exist_no_py(self, mock_isfile):
+        c = config.Config()
+        mock_isfile.return_value = False
+        self.assertRaisesRegexp(ConfigError, '^config file does not exist at path',
+                                lambda: c.from_py_file(self.FILE_NO_PY))
+
+    @patch('os.path.isfile')
+    def test_not_exist_py(self, mock_isfile):
+        c = config.Config()
+        mock_isfile.return_value = False
+        self.assertRaisesRegexp(ConfigError, '^config file does not exist at path',
+                                lambda: c.from_py_file(self.FILE_PY))
+
+    @patch('os.path.isfile')
+    def test_exist_no_py(self, mock_isfile):
+        c = config.Config()
+        mock_isfile.return_value = True
+        self.assertRaisesRegexp(ConfigError, '^config file is not python file$',
+                          lambda: c.from_py_file(self.FILE_NO_PY))
+
+    @patch('os.path.isfile')
+    def test_exist_py(self, mock_isfile):
+        c = config.Config()
+        mock_isfile.return_value = True
+        self.assertRaisesRegexp(IOError, 'Unable to load file',
+                                lambda: c.from_py_file(self.FILE_PY))
 
 
 if __name__ == '__main__':
