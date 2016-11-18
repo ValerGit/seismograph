@@ -10,6 +10,8 @@ from seismograph.exceptions import ConfigError
 from seismograph.utils import pyv
 from lib.factories import config_factory
 
+FIXTURE_TEST_KEYS = ['mock', 'fixture', 'test_some_data']
+
 
 class TestConfigCreateOptionParser(unittest.TestCase):
     def test_not_none(self):
@@ -192,13 +194,9 @@ class TestConfigFromModule(unittest.TestCase):
         self.assertRaises(ImportError, lambda: c.from_module(self.NON_EXIST))
 
     def test_exists(self):
-        real_conf = import_module(self.TEST_LIB)
-        real_conf_keys = filter(lambda k: not k.startswith('_'), dir(real_conf))
-        real_conf_vals = dict(map(lambda k: (k, vars(real_conf).get(k)), real_conf_keys))
-
         c = config.Config()
         c.from_module(self.TEST_LIB)
-        self.assertDictEqual(dict(c), real_conf_vals)
+        self.assertItemsEqual(dict(c).keys(), FIXTURE_TEST_KEYS)
 
 
 class TestConfigFromFile(unittest.TestCase):
@@ -237,12 +235,9 @@ class TestConfigFromFile(unittest.TestCase):
                                 lambda: c.from_py_file(self.FILE_PY))
 
     def test_exists_py(self):
-        real_conf = import_module(self.TEST_LIB)
-        real_conf_keys = filter(lambda k: not k.startswith('_'), dir(real_conf))
-
         c = config.Config()
         c.from_py_file(self.FILE_PY_EXISTS)
-        self.assertItemsEqual(dict(c).keys(), real_conf_keys)
+        self.assertItemsEqual(dict(c).keys(), FIXTURE_TEST_KEYS)
 
 
 if __name__ == '__main__':
