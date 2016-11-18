@@ -187,6 +187,15 @@ class TestConfigFromModule(unittest.TestCase):
 
         self.assertRaises(ImportError, lambda: c.from_module(self.NON_EXIST))
 
+    @patch('importlib.import_module')
+    def test_exists(self, mock_import):
+        mock_import.return_value = {}
+
+        c = config.Config()
+        c.from_module(self.NON_EXIST)
+
+        mock_import.assert_called_with({})
+
 
 class TestConfigFromFile(unittest.TestCase):
     FILE_NO_PY = 'test_file.me'
