@@ -3,11 +3,10 @@
 import unittest
 from importlib import import_module
 
-from mock import patch
+from mock import patch, MagicMock
 
 from seismograph import config
 from seismograph.exceptions import ConfigError
-from seismograph.utils import pyv
 from lib.factories import config_factory
 
 FIXTURE_TEST_KEYS = ['mock', 'fixture', 'test_some_data']
@@ -167,22 +166,24 @@ class _Test1:
         pass
 
 
+TEST1_ALL_KEYS = ['var3', 'var4_', 'test', 'SOME_VAR', 'var5']
+TEST1_NOT_CALLABLE_KEYS = ['var3', 'var4_', 'SOME_VAR']
+
+
 class TestConfigLoad(unittest.TestCase):
     def test_load_callable(self):
         obj = _Test1()
-        expected_keys = ['var3', 'var4_', 'test', 'SOME_VAR', 'var5']
 
         res = list(config._load(obj, load_callable=True))
         self.assertItemsEqual(res,
-                              map(lambda k: (k, getattr(obj, k)), expected_keys))
+                              map(lambda k: (k, getattr(obj, k)), TEST1_ALL_KEYS))
 
     def test_not_load_callable(self):
         obj = _Test1()
-        expected_keys = ['var3', 'var4_', 'SOME_VAR']
 
         res = list(config._load(obj, load_callable=False))
         self.assertItemsEqual(res,
-                              map(lambda k: (k, getattr(obj, k)), expected_keys))
+                              map(lambda k: (k, getattr(obj, k)), TEST1_NOT_CALLABLE_KEYS))
 
 
 class TestConfigFromModule(unittest.TestCase):
@@ -238,6 +239,49 @@ class TestConfigFromFile(unittest.TestCase):
         c = config.Config()
         c.from_py_file(self.FILE_PY_EXISTS)
         self.assertItemsEqual(dict(c).keys(), FIXTURE_TEST_KEYS)
+
+
+class TestConfigInitPath(unittest.TestCase):
+    PATH_IMPORT = 'some.module.for.testing'
+    PATH_PY = 'some_file.py'
+    PATH_NO = 'importlib'
+
+    def setUp(self):
+        self.from_module = config.Config.from_module
+        config.Config.from_module = MagicMock(name='from_module')
+        self.from_py_file = config.Config.from_py_file
+        config.Config.from_py_file = MagicMock(name='from_py_file')
+
+    def tearDown(self):
+        config.Config.from_module = self.from_module
+        config.Config.from_py_file = self.from_py_file
+
+    def test_path_import(self):
+        c = config.Config(path=self.PATH_IMPORT)
+        c.from_module.assert_called_once_with(self.PATH_IMPORT)
+        c.from_py_file.assert_not_called()
+
+    def test_path_py(self):
+        c = config.Config(path=self.PATH_PY)
+        c.from_module.assert_not_called()
+        c.from_py_file.assert_called_once_with(self.PATH_PY)
+
+    def test_path_no(self):
+        c = config.Config(path=self.PATH_NO)
+        c.from_module.assert_not_called()
+        c.from_py_file.assert_not_called()
+
+
+class TestConfigInitOptions(unittest.TestCase):
+    def test_no_options(self):
+        c = config.Config(options=None)
+        self.assertListEqual(dict(c).keys(), [])
+
+    def test_options(self):
+        obj = _Test1()
+        c = config.Config(options=obj)
+        real_dict = dict(map(lambda k: (k, getattr(obj, k)), TEST1_NOT_CALLABLE_KEYS))
+        self.assertDictEqual(dict(c), real_dict)
 
 
 if __name__ == '__main__':
