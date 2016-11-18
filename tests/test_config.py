@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+from importlib import import_module
+
 from mock import patch
 
 from seismograph import config
@@ -182,20 +184,20 @@ class TestConfigLoad(unittest.TestCase):
 
 class TestConfigFromModule(unittest.TestCase):
     NON_EXIST = 'non.existing.module'
+    TEST_LIB = 'lib.test_config_fixture'
 
     def test_not_exists(self):
         c = config.Config()
-
         self.assertRaises(ImportError, lambda: c.from_module(self.NON_EXIST))
 
-        # @patch('importlib.import_module')
-        # def test_exists(self, mock_import):
-        #     mock_import.return_value = {}
-        #
-        #     c = config.Config()
-        #     c.from_module(self.NON_EXIST)
-        #
-        #     mock_import.assert_called_with({})
+    def test_exists(self):
+        real_conf = import_module(self.TEST_LIB)
+        real_conf_keys = filter(lambda k: not k.startswith('_'), dir(real_conf))
+        real_conf_vals = dict(map(lambda k: (k, vars(real_conf).get(k)), real_conf_keys))
+
+        c = config.Config()
+        c.from_module(self.TEST_LIB)
+        self.assertDictEqual(dict(c), real_conf_vals)
 
 
 class TestConfigFromFile(unittest.TestCase):
@@ -221,7 +223,7 @@ class TestConfigFromFile(unittest.TestCase):
         c = config.Config()
         mock_isfile.return_value = True
         self.assertRaisesRegexp(ConfigError, '^config file is not python file$',
-                          lambda: c.from_py_file(self.FILE_NO_PY))
+                                lambda: c.from_py_file(self.FILE_NO_PY))
 
     @patch('os.path.isfile')
     def test_exist_py(self, mock_isfile):
