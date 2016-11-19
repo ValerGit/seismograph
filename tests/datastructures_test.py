@@ -8,42 +8,46 @@ from seismograph.datastructures import Context
 class DataStructuresTestCase(unittest.TestCase):
     def setUp(self):
         self.context = Context()
-        self.testItem = "TEST"
+        self.test_item = 'TEST'
 
-    def test_getattr_AttributeError_message(self):
-        errorString = '"Context" does not have "{}" attribute.'.format(self.testItem)
-        try:
-            self.context.__delattr__(self.testItem)
-        except AttributeError as error:
-            self.assertEquals(error.message, errorString)
+    def test_getattr_attribute_error_message(self):
+        with self.assertRaises(AttributeError):
+            self.context.__delattr__(self.test_item)
 
-    def test_getattr_raise_AttributeError(self):
-        self.assertRaises(AttributeError, self.context.__getattr__, self.testItem)
+    def test_getattr_raise_attribute_error(self):
+        with self.assertRaises(AttributeError):
+            self.context.__getattr__(self.test_item)
 
     def test_setattr(self):
-        testValue = "test"
-        self.context.__setattr__(self.testItem, testValue)
-        self.assertEqual(self.context[self.testItem], testValue)
+        test_value = 'test'
+        self.context.__setattr__(self.test_item, test_value)
+        self.assertEqual(self.context[self.test_item], test_value)
 
     def test_delattr_del(self):
-        self.context[self.testItem] = "test"
-        self.context.__delattr__(self.testItem)
-        self.assertRaises(AttributeError, self.context.__getattr__, self.testItem)
+        self.context[self.test_item] = 'test'
+        self.context.__delattr__(self.test_item)
 
-    def test_delattr_raise_AttributeError(self):
-        self.assertRaises(AttributeError, self.context.__delattr__, self.testItem)
+        with self.assertRaises(AttributeError):
+            self.context.__getattr__(self.test_item)
 
-    def test_delattr_AttributeError_message(self):
-        self.context[self.testItem] = "test"
-        self.context.__delattr__(self.testItem)
-        self.assertRaises(AttributeError, self.context.__getattr__, self.testItem)
+    def test_delattr_raise_attribute_error(self):
+        with self.assertRaises(AttributeError):
+            self.context.__delattr__(self.test_item)
+
+    def test_delattr_attribute_error_message(self):
+        self.context[self.test_item] = 'test'
+        self.context.__delattr__(self.test_item)
+
+        with self.assertRaises(AttributeError):
+            self.context.__getattr__(self.test_item)
 
     def test_function_copy(self):
-        self.context[0] = "test1"
-        self.context[1] = "test2"
-
-        newContext = self.context.copy()
-        self.assertEquals(self.context, newContext)
+        self.context.update({
+            'Hello': 'dear tester',
+            'Cool': 'tests for everyone'
+        })
+        new_context = self.context.copy()
+        self.assertEquals(self.context, new_context)
 
 
 if __name__ == '__main__':
