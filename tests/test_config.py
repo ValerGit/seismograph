@@ -246,30 +246,26 @@ class TestConfigInitPath(unittest.TestCase):
     PATH_PY = 'some_file.py'
     PATH_NO = 'importlib'
 
-    def setUp(self):
-        self.from_module = config.Config.from_module
-        config.Config.from_module = MagicMock(name='from_module')
-        self.from_py_file = config.Config.from_py_file
-        config.Config.from_py_file = MagicMock(name='from_py_file')
-
-    def tearDown(self):
-        config.Config.from_module = self.from_module
-        config.Config.from_py_file = self.from_py_file
-
-    def test_path_import(self):
+    @patch.object(config.Config, 'from_module')
+    @patch.object(config.Config, 'from_py_file')
+    def test_path_import(self, mock_from_py_file, mock_from_module):
         c = config.Config(path=self.PATH_IMPORT)
-        c.from_module.assert_called_once_with(self.PATH_IMPORT)
-        c.from_py_file.assert_not_called()
+        mock_from_module.assert_called_once_with(self.PATH_IMPORT)
+        mock_from_py_file.assert_not_called()
 
-    def test_path_py(self):
+    @patch.object(config.Config, 'from_module')
+    @patch.object(config.Config, 'from_py_file')
+    def test_path_py(self, mock_from_py_file, mock_from_module):
         c = config.Config(path=self.PATH_PY)
-        c.from_module.assert_not_called()
-        c.from_py_file.assert_called_once_with(self.PATH_PY)
+        mock_from_module.assert_not_called()
+        mock_from_py_file.assert_called_once_with(self.PATH_PY)
 
-    def test_path_no(self):
+    @patch.object(config.Config, 'from_module')
+    @patch.object(config.Config, 'from_py_file')
+    def test_path_no(self, mock_from_py_file, mock_from_module):
         c = config.Config(path=self.PATH_NO)
-        c.from_module.assert_not_called()
-        c.from_py_file.assert_not_called()
+        mock_from_module.assert_not_called()
+        mock_from_py_file.assert_not_called()
 
 
 class TestConfigInitOptions(unittest.TestCase):
