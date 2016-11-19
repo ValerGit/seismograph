@@ -1,3 +1,4 @@
+from functools import update_wrapper
 import types
 import unittest
 
@@ -15,7 +16,7 @@ from seismograph import suite
 def compose_decorators(*decs):
     def decorator(f):
         for dec in reversed(decs):
-            f = dec(f)
+            f = dec(update_wrapper(f, decorator))
         return f
 
     return decorator
