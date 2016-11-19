@@ -2,13 +2,12 @@
 
 import unittest
 from functools import update_wrapper
-from importlib import import_module
 
-from mock import patch, MagicMock
+from mock import patch
 
+from lib.factories import config_factory
 from seismograph import config
 from seismograph.exceptions import ConfigError
-from lib.factories import config_factory
 
 
 def compose_decorators(*decs):

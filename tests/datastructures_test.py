@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+
 from seismograph.datastructures import Context
 
 
@@ -43,9 +44,6 @@ class DataStructuresTestCase(unittest.TestCase):
 
         newContext = self.context.copy()
         self.assertEquals(self.context, newContext)
-
-    def tearDown(self):
-        pass
 
 
 if __name__ == '__main__':

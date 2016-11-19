@@ -1,15 +1,25 @@
 import unittest
 
-from seismograph.exceptions import *
+from seismograph.exceptions import ALLOW_RAISED_EXCEPTIONS
+from seismograph.exceptions import CollectError
+from seismograph.exceptions import ConfigError
+from seismograph.exceptions import DependencyError
+from seismograph.exceptions import EmergencyStop
+from seismograph.exceptions import ExtensionNotFound
+from seismograph.exceptions import ExtensionNotRequired
+from seismograph.exceptions import LoaderError
+from seismograph.exceptions import PyVersionError
+from seismograph.exceptions import SeismographError
+from seismograph.exceptions import Skip
+from seismograph.exceptions import TimeoutException
 
 
 class SeismographExceptionsTestCase(unittest.TestCase):
-
     def setUp(self):
         self.errors = [SeismographError, Skip, LoaderError, ConfigError,
-                    EmergencyStop, CollectError, PyVersionError,
-                    TimeoutException, ExtensionNotFound, ExtensionNotRequired,
-                    DependencyError];
+                       EmergencyStop, CollectError, PyVersionError,
+                       TimeoutException, ExtensionNotFound, ExtensionNotRequired,
+                       DependencyError]
 
     def test_Errors_message(self):
         test_message = "test error"
