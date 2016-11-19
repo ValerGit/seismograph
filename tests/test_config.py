@@ -9,6 +9,24 @@ from seismograph import config
 from seismograph.exceptions import ConfigError
 from lib.factories import config_factory
 
+
+class _LoadObjectForTests:
+    SOME_VAR = "some_var"
+
+    def __init__(self):
+        self._var1 = True
+        self._var2 = False
+        self.var3 = "var3"
+        self.var4_ = [1, 2, 3]
+        self.var5 = lambda x: x and True
+
+    def test(self):
+        pass
+
+
+LOAD_OBJECT_ALL_KEYS = ['var3', 'var4_', 'test', 'SOME_VAR', 'var5']
+LOAD_OBJECT_NOT_CALLABLE_KEYS = ['var3', 'var4_', 'SOME_VAR']
+
 FIXTURE_TEST_KEYS = ['mock', 'fixture', 'test_some_data']
 
 
@@ -152,38 +170,20 @@ class TestConfigGetConfigPathByEnv(unittest.TestCase):
         mock_getenv.assert_called_with(self.KEY, self.DEFAULT)
 
 
-class _Test1:
-    SOME_VAR = "some_var"
-
-    def __init__(self):
-        self._var1 = True
-        self._var2 = False
-        self.var3 = "var3"
-        self.var4_ = [1, 2, 3]
-        self.var5 = lambda x: x and True
-
-    def test(self):
-        pass
-
-
-TEST1_ALL_KEYS = ['var3', 'var4_', 'test', 'SOME_VAR', 'var5']
-TEST1_NOT_CALLABLE_KEYS = ['var3', 'var4_', 'SOME_VAR']
-
-
 class TestConfigLoad(unittest.TestCase):
     def test_load_callable(self):
-        obj = _Test1()
+        obj = _LoadObjectForTests()
 
         res = list(config._load(obj, load_callable=True))
         self.assertItemsEqual(res,
-                              map(lambda k: (k, getattr(obj, k)), TEST1_ALL_KEYS))
+                              map(lambda k: (k, getattr(obj, k)), LOAD_OBJECT_ALL_KEYS))
 
     def test_not_load_callable(self):
-        obj = _Test1()
+        obj = _LoadObjectForTests()
 
         res = list(config._load(obj, load_callable=False))
         self.assertItemsEqual(res,
-                              map(lambda k: (k, getattr(obj, k)), TEST1_NOT_CALLABLE_KEYS))
+                              map(lambda k: (k, getattr(obj, k)), LOAD_OBJECT_NOT_CALLABLE_KEYS))
 
 
 class TestConfigFromModule(unittest.TestCase):
@@ -278,9 +278,9 @@ class TestConfigInitOptions(unittest.TestCase):
         self.assertListEqual(dict(c).keys(), [])
 
     def test_options(self):
-        obj = _Test1()
+        obj = _LoadObjectForTests()
         c = config.Config(options=obj)
-        real_dict = dict(map(lambda k: (k, getattr(obj, k)), TEST1_NOT_CALLABLE_KEYS))
+        real_dict = dict(map(lambda k: (k, getattr(obj, k)), LOAD_OBJECT_NOT_CALLABLE_KEYS))
         self.assertDictEqual(dict(c), real_dict)
 
 
