@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+from functools import update_wrapper
 from importlib import import_module
 
 from mock import patch, MagicMock
@@ -8,6 +9,15 @@ from mock import patch, MagicMock
 from seismograph import config
 from seismograph.exceptions import ConfigError
 from lib.factories import config_factory
+
+
+def compose_decorators(*decs):
+    def decorator(f):
+        for dec in reversed(decs):
+            f = dec(update_wrapper(f, decorator))
+        return f
+
+    return decorator
 
 
 class _LoadObjectForTests:
@@ -246,22 +256,24 @@ class TestConfigInitPath(unittest.TestCase):
     PATH_PY = 'some_file.py'
     PATH_NO = 'importlib'
 
-    @patch.object(config.Config, 'from_module')
-    @patch.object(config.Config, 'from_py_file')
+    patch_from = compose_decorators(
+        patch.object(config.Config, 'from_module'),
+        patch.object(config.Config, 'from_py_file')
+    )
+
+    @patch_from
     def test_path_import(self, mock_from_py_file, mock_from_module):
         c = config.Config(path=self.PATH_IMPORT)
         mock_from_module.assert_called_once_with(self.PATH_IMPORT)
         mock_from_py_file.assert_not_called()
 
-    @patch.object(config.Config, 'from_module')
-    @patch.object(config.Config, 'from_py_file')
+    @patch_from
     def test_path_py(self, mock_from_py_file, mock_from_module):
         c = config.Config(path=self.PATH_PY)
         mock_from_module.assert_not_called()
         mock_from_py_file.assert_called_once_with(self.PATH_PY)
 
-    @patch.object(config.Config, 'from_module')
-    @patch.object(config.Config, 'from_py_file')
+    @patch_from
     def test_path_no(self, mock_from_py_file, mock_from_module):
         c = config.Config(path=self.PATH_NO)
         mock_from_module.assert_not_called()
