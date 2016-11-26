@@ -84,67 +84,141 @@ class TestConfigPrepareConfig(unittest.TestCase):
         config.prepare_config(conf)
         mock_dictConfig.assert_not_called()
 
-    # Как должна определяться опция мульпроцессинга в идеале
-    def _is_multiprocessing(self, conf):
-        return conf.get(self.MULTIPROCESSING_KEY) or (
-            not conf.get(self.GEVENT_KEY) and
-            not conf.get(self.THREADING_KEY) and
-            (conf.get(self.ASYNC_SUITES_KEY) or conf.get(self.ASYNC_TESTS_KEY))
-        )
+    # Изменение GEVENT влияет на MULTIPROCESSING
+    def test_multiprocessing_gevent(self):
+        conf = {
+            self.MULTIPROCESSING_KEY: False,
+            self.GEVENT_KEY: False,
+            self.THREADING_KEY: False,
+            self.ASYNC_SUITES_KEY: True,
+            self.ASYNC_TESTS_KEY: True,
+        }
 
-    # Как должна определяться многословность вывода
-    def _is_verbose(self, conf):
-        return conf.get(self.VERBOSE_KEY) or (
-            (
-                conf.get(self.STEPS_LOG_KEY) or
-                conf.get(self.FLOWS_LOG_KEY)
-            ) and not conf.get(self.VERBOSE_KEY)
-        )
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertTrue(conf_obj.get(self.MULTIPROCESSING_KEY))
 
-    def _gen_bool_vars(self):
-        VARS = [
-            self.MULTIPROCESSING_KEY,
-            self.GEVENT_KEY,
-            self.THREADING_KEY,
-            self.ASYNC_SUITES_KEY,
-            self.ASYNC_TESTS_KEY,
-            self.STEPS_LOG_KEY,
-            self.FLOWS_LOG_KEY,
-            self.VERBOSE_KEY
-        ]
-        NUM_OF_VARS = len(VARS)
+        conf[self.GEVENT_KEY] = True
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertFalse(conf_obj.get(self.MULTIPROCESSING_KEY))
 
-        for i in range(0, 2 ** NUM_OF_VARS):
-            bools = map(lambda x: x == '1', list(('{0:0' + str(NUM_OF_VARS) + 'b}').format(i)))
-            res = dict(zip(
-                VARS,
-                bools
-            ))
-            yield res
+    # Изменение THREADING влияет на MULTIPROCESSING
+    def test_multiprocessing_threading(self):
+        conf = {
+            self.MULTIPROCESSING_KEY: False,
+            self.GEVENT_KEY: False,
+            self.THREADING_KEY: False,
+            self.ASYNC_SUITES_KEY: True,
+            self.ASYNC_TESTS_KEY: True,
+        }
 
-    def test_multithreading(self):
-        for conf_data in self._gen_bool_vars():
-            conf = config_factory.create(**conf_data)
-            config.prepare_config(conf)
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertTrue(conf_obj.get(self.MULTIPROCESSING_KEY))
 
-            expected = self._is_multiprocessing(conf)
-            real = conf.get(self.MULTIPROCESSING_KEY)
+        conf[self.THREADING_KEY] = True
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertFalse(conf_obj.get(self.MULTIPROCESSING_KEY))
 
-            self.assertEquals(real, expected,
-                              str(conf_data) + " {} real: {} expected: {}".format(self.MULTIPROCESSING_KEY, real,
-                                                                                  expected))
+    # Изменение ASYNC_* влияет на MULTIPROCESSING
+    def test_multiprocessing_async(self):
+        conf = {
+            self.MULTIPROCESSING_KEY: False,
+            self.GEVENT_KEY: False,
+            self.THREADING_KEY: False,
+            self.ASYNC_SUITES_KEY: False,
+            self.ASYNC_TESTS_KEY: False,
+        }
 
-    def test_verbose(self):
-        for conf_data in self._gen_bool_vars():
-            conf = config_factory.create(**conf_data)
-            config.prepare_config(conf)
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertFalse(conf_obj.get(self.MULTIPROCESSING_KEY))
 
-            expected = self._is_verbose(conf)
-            real = conf.get(self.VERBOSE_KEY)
+        conf[self.ASYNC_SUITES_KEY] = True
+        conf[self.ASYNC_TESTS_KEY] = False
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertTrue(conf_obj.get(self.MULTIPROCESSING_KEY))
 
-            self.assertEquals(real, expected,
-                              str(conf_data) + " {} real: {} expected: {}".format(self.VERBOSE_KEY, real,
-                                                                                  expected))
+        conf[self.ASYNC_SUITES_KEY] = False
+        conf[self.ASYNC_TESTS_KEY] = True
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertTrue(conf_obj.get(self.MULTIPROCESSING_KEY))
+
+        conf[self.ASYNC_SUITES_KEY] = True
+        conf[self.ASYNC_TESTS_KEY] = True
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertTrue(conf_obj.get(self.MULTIPROCESSING_KEY))
+
+    # MULTIPROCESSING без ASYNC_*, THREADING, GEVENT остается неизменным
+    def test_multiprocessing_raw(self):
+        conf = {
+            self.MULTIPROCESSING_KEY: False,
+            self.GEVENT_KEY: True,
+            self.THREADING_KEY: True,
+            self.ASYNC_SUITES_KEY: False,
+            self.ASYNC_TESTS_KEY: False,
+        }
+
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertFalse(conf_obj.get(self.MULTIPROCESSING_KEY))
+
+        conf[self.MULTIPROCESSING_KEY] = True
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertTrue(conf_obj.get(self.MULTIPROCESSING_KEY))
+
+    # Изменение *_LOG влияет на VERBOSE
+    def test_verbose_log(self):
+        conf = {
+            self.VERBOSE_KEY: False,
+            self.STEPS_LOG_KEY: False,
+            self.FLOWS_LOG_KEY: False,
+        }
+
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertFalse(conf_obj.get(self.VERBOSE_KEY))
+
+        conf[self.STEPS_LOG_KEY] = True
+        conf[self.FLOWS_LOG_KEY] = False
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertTrue(conf_obj.get(self.VERBOSE_KEY))
+
+        conf[self.STEPS_LOG_KEY] = False
+        conf[self.FLOWS_LOG_KEY] = True
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertTrue(conf_obj.get(self.VERBOSE_KEY))
+
+        conf[self.STEPS_LOG_KEY] = True
+        conf[self.FLOWS_LOG_KEY] = True
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertTrue(conf_obj.get(self.VERBOSE_KEY))
+
+    # Изменение *_LOG влияет на VERBOSE
+    def test_verbose_raw(self):
+        conf = {
+            self.VERBOSE_KEY: False,
+            self.STEPS_LOG_KEY: False,
+            self.FLOWS_LOG_KEY: False,
+        }
+
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertFalse(conf_obj.get(self.VERBOSE_KEY))
+
+        conf[self.VERBOSE_KEY] = True
+        conf_obj = config_factory.create(**conf)
+        config.prepare_config(conf_obj)
+        self.assertTrue(conf_obj.get(self.VERBOSE_KEY))
 
 
 class TestConfigGetConfigPathByEnv(unittest.TestCase):
