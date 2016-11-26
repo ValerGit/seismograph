@@ -19,6 +19,7 @@ def compose_decorators(*decs):
     return decorator
 
 
+# Класс как пример объекта конфигурации
 class _LoadObjectForTests:
     SOME_VAR = "some_var"
 
@@ -152,21 +153,27 @@ class TestConfigGetConfigPathByEnv(unittest.TestCase):
     DEFAULT = "DEFAULT"
     VAL = "VAL"
 
+    # Можем получить путь к конфигурации из переменной окружения
+    # В данном случае нет такой переменной, получаем None в любом случае
     @patch('os.getenv')
     def test_none_no_default(self, mock_getenv):
         mock_getenv.return_value = None
         self.assertEquals(config.get_config_path_by_env(self.KEY), None)
         self.assertEquals(config.get_config_path_by_env(self.KEY, base_path=self.BASE_PATH), None)
 
+    # Можем получить путь к конфигурации из переменной окружения
+    # и base path добавляется
     @patch('os.getenv')
     def test_val_no_default(self, mock_getenv):
         mock_getenv.return_value = self.VAL
         self.assertEquals(config.get_config_path_by_env(self.KEY), self.VAL)
         self.assertEquals(config.get_config_path_by_env(self.KEY, base_path=self.BASE_PATH), self.BASE_PATH + self.VAL)
 
+    # Можем получить путь из значения по умолчанию, если его нет в переменной окружения
+    # и base path добавляется
     @patch('os.getenv')
     def test_none_with_default(self, mock_getenv):
-        mock_getenv.return_value = self.DEFAULT
+        mock_getenv.return_value = self.DEFAULT  # прихоится возвращать фолбэк
         self.assertEquals(config.get_config_path_by_env(self.KEY, default=self.DEFAULT), self.DEFAULT)
         mock_getenv.assert_called_with(self.KEY, self.DEFAULT)
         mock_getenv.reset_mock()
@@ -175,6 +182,8 @@ class TestConfigGetConfigPathByEnv(unittest.TestCase):
                           self.BASE_PATH + self.DEFAULT)
         mock_getenv.assert_called_with(self.KEY, self.DEFAULT)
 
+    # Можем получить путь к конфиграции из переменной окружения, значение по умолчанию игнорируется
+    # и base path добавляется
     @patch('os.getenv')
     def test_val_with_default(self, mock_getenv):
         mock_getenv.return_value = self.VAL
@@ -188,29 +197,35 @@ class TestConfigGetConfigPathByEnv(unittest.TestCase):
 
 
 class TestConfigLoad(unittest.TestCase):
+    # Можем получить объект конфигурации в том числе с полями-функциями
     def test_load_callable(self):
         obj = _LoadObjectForTests()
 
         res = list(config._load(obj, load_callable=True))
-        self.assertItemsEqual(res,
-                              map(lambda k: (k, getattr(obj, k)), LOAD_OBJECT_ALL_KEYS))
+        expected = map(lambda k: (k, getattr(obj, k)), LOAD_OBJECT_ALL_KEYS)
+        self.assertItemsEqual(res, expected)
 
+    # Можем получить объект конфигурации без полей-функций
     def test_not_load_callable(self):
         obj = _LoadObjectForTests()
 
         res = list(config._load(obj, load_callable=False))
-        self.assertItemsEqual(res,
-                              map(lambda k: (k, getattr(obj, k)), LOAD_OBJECT_NOT_CALLABLE_KEYS))
+        expected = map(lambda k: (k, getattr(obj, k)), LOAD_OBJECT_NOT_CALLABLE_KEYS)
+        self.assertItemsEqual(res, expected)
 
 
 class TestConfigFromModule(unittest.TestCase):
     NON_EXIST = 'non.existing.module'
     TEST_LIB = 'tests.lib.test_config_fixture'
 
+    # Не можем загрузить несуществующий модуль
     def test_not_exists(self):
         c = config.Config()
-        self.assertRaises(ImportError, lambda: c.from_module(self.NON_EXIST))
 
+        with self.assertRaises(ImportError):
+            c.from_module(self.NON_EXIST)
+
+    # Можем загрузить существующий модуль
     def test_exists(self):
         c = config.Config()
         c.from_module(self.TEST_LIB)
@@ -224,34 +239,54 @@ class TestConfigFromFile(unittest.TestCase):
     FILE_PY_EXISTS = 'tests/lib/test_config_fixture.py'
     TEST_LIB = 'tests.lib.test_config_fixture'
 
+    # Не можем загрузить несуществующий файл без .py на конце
     @patch('os.path.isfile')
     def test_not_exists_no_py(self, mock_isfile):
         c = config.Config()
         mock_isfile.return_value = False
-        self.assertRaisesRegexp(ConfigError, '^config file does not exist at path',
-                                lambda: c.from_py_file(self.FILE_NO_PY))
+        with self.assertRaises(ConfigError) as mock_exc:
+            c.from_py_file(self.FILE_NO_PY)
 
+        self.assertEquals(mock_exc.exception.message,
+                          'config file does not exist at path "{}"'.format(self.FILE_NO_PY))
+
+    # Не можем загрузить несуществующий файл с .py на конце
     @patch('os.path.isfile')
     def test_not_exists_py(self, mock_isfile):
         c = config.Config()
         mock_isfile.return_value = False
-        self.assertRaisesRegexp(ConfigError, '^config file does not exist at path',
-                                lambda: c.from_py_file(self.FILE_PY))
+        with self.assertRaises(ConfigError) as mock_exc:
+            c.from_py_file(self.FILE_PY)
 
+        self.assertEquals(mock_exc.exception.message,
+                          'config file does not exist at path "{}"'.format(self.FILE_PY))
+
+    # Не можем загрузить существующий файл без .py на конце
     @patch('os.path.isfile')
     def test_exists_no_py(self, mock_isfile):
         c = config.Config()
         mock_isfile.return_value = True
-        self.assertRaisesRegexp(ConfigError, '^config file is not python file$',
-                                lambda: c.from_py_file(self.FILE_NO_PY))
 
+        with self.assertRaises(ConfigError) as mock_exc:
+            c.from_py_file(self.FILE_NO_PY)
+
+        self.assertEquals(mock_exc.exception.message,
+                          'config file is not python file')
+
+    # Не можем загрузить существующий файл с .py на конце => можем из поймать свое исключение
     @patch('os.path.isfile')
     def test_exists_py_fail(self, mock_isfile):
         c = config.Config()
         mock_isfile.return_value = True
-        self.assertRaisesRegexp(IOError, 'Unable to load file',
-                                lambda: c.from_py_file(self.FILE_PY))
 
+        with self.assertRaises(IOError) as mock_exc:
+            c.from_py_file(self.FILE_PY)
+
+        expected_start = 'Unable to load file "'
+        self.assertEquals(mock_exc.exception.strerror[:len(expected_start)],
+                          expected_start)
+
+    # Можем загрузить существующий файл с .py на конце
     def test_exists_py(self):
         c = config.Config()
         c.from_py_file(self.FILE_PY_EXISTS)
@@ -268,18 +303,21 @@ class TestConfigInitPath(unittest.TestCase):
         patch.object(config.Config, 'from_py_file')
     )
 
+    # Можем пытаться загрузить конфигурацию из модуля, если путь похож на модуль
     @patch_from
     def test_path_import(self, mock_from_py_file, mock_from_module):
         c = config.Config(path=self.PATH_IMPORT)
         mock_from_module.assert_called_once_with(self.PATH_IMPORT)
         mock_from_py_file.assert_not_called()
 
+    # Можем пытаться загрузить конфигурацию из файла, если путь похож на .py файл
     @patch_from
     def test_path_py(self, mock_from_py_file, mock_from_module):
         c = config.Config(path=self.PATH_PY)
         mock_from_module.assert_not_called()
         mock_from_py_file.assert_called_once_with(self.PATH_PY)
 
+    # Не можем загрузить конфигурацию из непонятно чего (ни файл, ни модуль)
     @patch_from
     def test_path_no(self, mock_from_py_file, mock_from_module):
         c = config.Config(path=self.PATH_NO)
@@ -288,10 +326,12 @@ class TestConfigInitPath(unittest.TestCase):
 
 
 class TestConfigInitOptions(unittest.TestCase):
+    # Можем создать девственно чистый конфиг
     def test_no_options(self):
         c = config.Config(options=None)
         self.assertListEqual(dict(c).keys(), [])
 
+    # Можем создать конфиг с полями из объекта (поля-не функции)
     def test_options(self):
         obj = _LoadObjectForTests()
         c = config.Config(options=obj)
