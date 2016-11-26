@@ -40,12 +40,14 @@ FIXTURE_TEST_KEYS = ['mock', 'fixture', 'test_some_data']
 
 
 class TestConfigCreateOptionParser(unittest.TestCase):
+    # Можем создать OptionParser
     def test_not_none(self):
         parser = config.create_option_parser()
         self.assertIsNotNone(parser)
 
 
 class TestConfigPrepareConfig(unittest.TestCase):
+    # Boolean-ключи конфигурации, с которыми что-то делается после загрузки
     LOGGING_KEY = 'LOGGING_SETTINGS'
     GEVENT_KEY = 'GEVENT'
     THREADING_KEY = 'THREADING'
@@ -56,29 +58,32 @@ class TestConfigPrepareConfig(unittest.TestCase):
     FLOWS_LOG_KEY = 'FLOWS_LOG'
     VERBOSE_KEY = 'VERBOSE'
 
-    def setUp(self):
-        self.conf_logging_dict = {
+    # Можем установить настройки логирования из словарика
+    @patch('logging.config.dictConfig')
+    def test_logging_settings_dict(self, mock_dictConfig):
+        conf_logging_dict = {
             self.LOGGING_KEY: {
                 'mock': True,
             }
         }
 
-        self.conf_logging_list = {
-            self.LOGGING_KEY: [1, 2, 3]
-        }
-
-    @patch('logging.config.dictConfig')
-    def test_logging_settings_dict(self, mock_dictConfig):
-        conf = config_factory.create(**self.conf_logging_dict)
+        conf = config_factory.create(**conf_logging_dict)
         config.prepare_config(conf)
-        mock_dictConfig.assert_called_with(self.conf_logging_dict.get(self.LOGGING_KEY))
+        mock_dictConfig.assert_called_with(conf_logging_dict.get(self.LOGGING_KEY))
 
+    # Можем безопасно передать левые настройки логирования (не словарик)
+    # Тогда они будут проигнорированы
     @patch('logging.config.dictConfig')
     def test_logging_settings_list(self, mock_dictConfig):
-        conf = config_factory.create(**self.conf_logging_list)
+        conf_logging_not_dict = {
+            self.LOGGING_KEY: [1, 2, 3],
+        }
+
+        conf = config_factory.create(**conf_logging_not_dict)
         config.prepare_config(conf)
         mock_dictConfig.assert_not_called()
 
+    # Как должна определяться опция мульпроцессинга в идеале
     def _is_multiprocessing(self, conf):
         return conf.get(self.MULTIPROCESSING_KEY) or (
             not conf.get(self.GEVENT_KEY) and
@@ -86,11 +91,14 @@ class TestConfigPrepareConfig(unittest.TestCase):
             (conf.get(self.ASYNC_SUITES_KEY) or conf.get(self.ASYNC_TESTS_KEY))
         )
 
+    # Как должна определяться многословность вывода
     def _is_verbose(self, conf):
         return conf.get(self.VERBOSE_KEY) or (
-                                                 conf.get(self.STEPS_LOG_KEY) or
-                                                 conf.get(self.FLOWS_LOG_KEY)
-                                             ) and not conf.get(self.VERBOSE_KEY)
+            (
+                conf.get(self.STEPS_LOG_KEY) or
+                conf.get(self.FLOWS_LOG_KEY)
+            ) and not conf.get(self.VERBOSE_KEY)
+        )
 
     def _gen_bool_vars(self):
         VARS = [
